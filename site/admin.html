@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — Commently</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💬</text></svg>">
+  <style>
+    .admin-wrap { max-width: 960px; margin: 0 auto; padding: 6rem 2rem 4rem; position: relative; z-index: 1; }
+
+    /* Login */
+    .login-card {
+      max-width: 420px;
+      margin: 12vh auto;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2.5rem;
+      text-align: center;
+    }
+    .login-card h1 {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 0.5rem;
+    }
+    .login-card p { color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem; }
+
+    /* Forms */
+    .input-group { margin-bottom: 1rem; text-align: left; }
+    .input-group label {
+      display: block;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.375rem;
+    }
+    input[type="text"], input[type="password"] {
+      width: 100%;
+      padding: 0.625rem 0.875rem;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-bright);
+      border-radius: 6px;
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus { border-color: var(--accent); }
+    .error-msg { color: var(--red); font-size: 0.8rem; margin-top: 0.5rem; }
+
+    /* Dashboard */
+    .dash-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .dash-header h1 {
+      font-family: var(--font-display);
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+    }
+    .dash-actions { display: flex; gap: 0.75rem; }
+
+    /* Tenant list */
+    .tenant-grid {
+      display: grid;
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .tenant-row {
+      display: grid;
+      grid-template-columns: 1fr auto auto auto;
+      gap: 1rem;
+      align-items: center;
+      padding: 1rem 1.25rem;
+      background: var(--bg-secondary);
+      transition: background 0.15s;
+      cursor: pointer;
+    }
+    .tenant-row:hover { background: var(--bg-tertiary); }
+    .tenant-row.header {
+      cursor: default;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0.75rem 1.25rem;
+    }
+    .tenant-row.header:hover { background: var(--bg-secondary); }
+    .tenant-name {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+    .tenant-prefix {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+    .tenant-date {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .tenant-actions { display: flex; gap: 0.5rem; }
+
+    .btn-sm {
+      padding: 0.35rem 0.75rem;
+      font-size: 0.75rem;
+      border-radius: 6px;
+      font-family: var(--font-body);
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border-bright);
+      background: transparent;
+      color: var(--text-secondary);
+      transition: all 0.15s;
+    }
+    .btn-sm:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-sm.danger:hover { border-color: var(--red); color: var(--red); }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+    }
+    .modal {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      max-width: 480px;
+      width: 90%;
+    }
+    .modal h2 {
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      letter-spacing: -0.02em;
+    }
+    .modal-actions {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: flex-end;
+      margin-top: 1.5rem;
+    }
+
+    /* Stats panel */
+    .stats-panel {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      margin-top: 1.5rem;
+    }
+    .stats-panel h2 {
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+      letter-spacing: -0.02em;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .stat-card {
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      padding: 1.25rem;
+    }
+    .stat-card .stat-value {
+      font-family: var(--font-display);
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: var(--accent);
+    }
+    .stat-card .stat-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+
+    .recent-list { list-style: none; }
+    .recent-item {
+      padding: 0.75rem 0;
+      border-bottom: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 1rem;
+    }
+    .recent-item:last-child { border-bottom: none; }
+    .recent-body {
+      font-size: 0.9rem;
+      color: var(--text-primary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .recent-meta {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+    .recent-author { color: var(--text-secondary); font-size: 0.8rem; }
+
+    /* Key reveal */
+    .key-reveal {
+      background: var(--bg-code);
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      padding: 1rem;
+      margin: 1rem 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+    .key-reveal code {
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      color: var(--accent);
+      word-break: break-all;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: var(--text-muted);
+    }
+    .empty-state p { margin-bottom: 1.5rem; }
+
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-bright);
+      border-radius: 8px;
+      padding: 0.75rem 1.25rem;
+      font-size: 0.85rem;
+      color: var(--text-primary);
+      z-index: 300;
+      animation: fadeUp 0.3s ease-out;
+    }
+    .toast.success { border-color: var(--accent); }
+    .toast.error { border-color: var(--red); }
+
+    .back-btn {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      cursor: pointer;
+      font-family: var(--font-body);
+      padding: 0;
+      transition: color 0.15s;
+    }
+    .back-btn:hover { color: var(--text-primary); }
+
+    @media (max-width: 640px) {
+      .tenant-row { grid-template-columns: 1fr; gap: 0.5rem; }
+      .tenant-row.header { display: none; }
+      .stats-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="nav-logo">commently<span>_</span></a>
+  <ul class="nav-links">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="docs.html">Docs</a></li>
+    <li><a href="admin.html" class="active">Admin</a></li>
+    <li><a href="https://github.com/itayshmool/commently" class="btn btn-secondary">GitHub</a></li>
+  </ul>
+</nav>
+
+<!-- ── LOGIN ── -->
+<div id="login-view" class="admin-wrap">
+  <div class="login-card">
+    <h1>Admin Console</h1>
+    <p>Enter your admin key and API base URL to manage tenants.</p>
+    <div class="input-group">
+      <label>API Base URL</label>
+      <input type="text" id="base-url" value="https://commently-api.onrender.com" placeholder="https://your-api.onrender.com">
+    </div>
+    <div class="input-group">
+      <label>Admin API Key</label>
+      <input type="password" id="admin-key" placeholder="your-admin-key">
+    </div>
+    <div id="login-error" class="error-msg" style="display:none"></div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:1rem" onclick="doLogin()">Connect →</button>
+  </div>
+</div>
+
+<!-- ── DASHBOARD ── -->
+<div id="dash-view" class="admin-wrap" style="display:none">
+
+  <!-- Tenant list -->
+  <div id="tenant-list-view">
+    <div class="dash-header">
+      <h1>Tenants</h1>
+      <div class="dash-actions">
+        <button class="btn btn-secondary" onclick="loadTenants()">Refresh</button>
+        <button class="btn btn-primary" onclick="showCreateModal()">+ New tenant</button>
+      </div>
+    </div>
+    <div id="tenant-container"></div>
+  </div>
+
+  <!-- Tenant detail / stats -->
+  <div id="tenant-detail-view" style="display:none">
+    <button class="back-btn" onclick="showList()">← Back to tenants</button>
+    <div id="stats-container"></div>
+  </div>
+</div>
+
+<!-- ── CREATE MODAL ── -->
+<div id="create-modal" class="modal-overlay" style="display:none" onclick="if(event.target===this)hideCreateModal()">
+  <div class="modal">
+    <h2>Create Tenant</h2>
+    <div class="input-group">
+      <label>Tenant Name</label>
+      <input type="text" id="new-tenant-name" placeholder="e.g. my-blog, deckdrop">
+    </div>
+    <div id="create-error" class="error-msg" style="display:none"></div>
+    <div id="create-result" style="display:none"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="hideCreateModal()">Close</button>
+      <button class="btn btn-primary" id="create-btn" onclick="createTenant()">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── ROTATE CONFIRM ── -->
+<div id="rotate-modal" class="modal-overlay" style="display:none" onclick="if(event.target===this)hideRotateModal()">
+  <div class="modal">
+    <h2>Rotate API Key</h2>
+    <p style="color:var(--text-secondary);font-size:0.9rem">This will <strong style="color:var(--red)">immediately invalidate</strong> the current key for <strong id="rotate-tenant-name"></strong>. The consuming app will need to be updated with the new key.</p>
+    <div id="rotate-result" style="display:none"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="hideRotateModal()">Cancel</button>
+      <button class="btn btn-primary" id="rotate-btn" onclick="doRotate()">Rotate key</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let BASE_URL = '';
+let ADMIN_KEY = '';
+let currentRotateId = '';
+
+function toast(msg, type = 'success') {
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+async function api(method, path, body) {
+  const opts = {
+    method,
+    headers: { 'Authorization': `Bearer ${ADMIN_KEY}`, 'Content-Type': 'application/json' },
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(`${BASE_URL}${path}`, opts);
+  return res.json();
+}
+
+async function doLogin() {
+  BASE_URL = document.getElementById('base-url').value.replace(/\/+$/, '');
+  ADMIN_KEY = document.getElementById('admin-key').value;
+  const errEl = document.getElementById('login-error');
+
+  if (!ADMIN_KEY) { errEl.style.display = 'block'; errEl.textContent = 'Admin key is required'; return; }
+
+  try {
+    const res = await api('GET', '/api/tenants');
+    if (!res.success) {
+      errEl.style.display = 'block';
+      errEl.textContent = res.error?.message || 'Authentication failed';
+      return;
+    }
+    errEl.style.display = 'none';
+    document.getElementById('login-view').style.display = 'none';
+    document.getElementById('dash-view').style.display = 'block';
+    renderTenants(res.data);
+  } catch (e) {
+    errEl.style.display = 'block';
+    errEl.textContent = 'Connection failed — check the URL';
+  }
+}
+
+document.getElementById('admin-key').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+async function loadTenants() {
+  const res = await api('GET', '/api/tenants');
+  if (res.success) renderTenants(res.data);
+}
+
+function renderTenants(tenants) {
+  const c = document.getElementById('tenant-container');
+  if (tenants.length === 0) {
+    c.innerHTML = '<div class="empty-state"><p>No tenants yet. Create one to get started.</p></div>';
+    return;
+  }
+  c.innerHTML = `
+    <div class="tenant-grid">
+      <div class="tenant-row header">
+        <span>Name</span><span>Key prefix</span><span>Created</span><span>Actions</span>
+      </div>
+      ${tenants.map(t => `
+        <div class="tenant-row" onclick="showStats('${t.id}')">
+          <span class="tenant-name">${esc(t.name)}</span>
+          <span class="tenant-prefix">${esc(t.api_key_prefix)}...</span>
+          <span class="tenant-date">${new Date(t.created_at).toLocaleDateString()}</span>
+          <span class="tenant-actions" onclick="event.stopPropagation()">
+            <button class="btn-sm" onclick="showRotateModal('${t.id}','${esc(t.name)}')">Rotate key</button>
+            <button class="btn-sm" onclick="showStats('${t.id}')">Stats</button>
+          </span>
+        </div>
+      `).join('')}
+    </div>`;
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+async function showStats(id) {
+  document.getElementById('tenant-list-view').style.display = 'none';
+  document.getElementById('tenant-detail-view').style.display = 'block';
+  document.getElementById('stats-container').innerHTML = '<p style="color:var(--text-muted)">Loading...</p>';
+
+  const res = await api('GET', `/api/tenants/${id}/stats`);
+  if (!res.success) {
+    document.getElementById('stats-container').innerHTML = `<p class="error-msg">${res.error.message}</p>`;
+    return;
+  }
+
+  const d = res.data;
+  document.getElementById('stats-container').innerHTML = `
+    <div class="stats-panel">
+      <h2>
+        <span>${esc(d.name)}</span>
+        <span class="tenant-prefix" style="font-weight:400">${esc(d.api_key_prefix)}...</span>
+      </h2>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value">${d.stats.total_comments}</div>
+          <div class="stat-label">Total comments</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${d.stats.total_resources}</div>
+          <div class="stat-label">Resources</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${d.stats.deleted_comments}</div>
+          <div class="stat-label">Deleted</div>
+        </div>
+      </div>
+      ${d.recent_comments.length > 0 ? `
+        <h3 style="font-family:var(--font-mono);font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.75rem">Recent comments</h3>
+        <ul class="recent-list">
+          ${d.recent_comments.map(c => `
+            <li class="recent-item">
+              <div>
+                <div class="recent-body">${esc(c.body)}</div>
+                <div class="recent-author">${esc(c.author_name)} on ${esc(c.resource_id)}${c.context_key ? ' · ' + esc(c.context_key) : ''}</div>
+              </div>
+              <div class="recent-meta">${new Date(c.created_at).toLocaleString()}</div>
+            </li>
+          `).join('')}
+        </ul>
+      ` : '<p style="color:var(--text-muted);font-size:0.9rem">No comments yet.</p>'}
+    </div>`;
+}
+
+function showList() {
+  document.getElementById('tenant-detail-view').style.display = 'none';
+  document.getElementById('tenant-list-view').style.display = 'block';
+  loadTenants();
+}
+
+function showCreateModal() {
+  document.getElementById('create-modal').style.display = 'flex';
+  document.getElementById('new-tenant-name').value = '';
+  document.getElementById('create-error').style.display = 'none';
+  document.getElementById('create-result').style.display = 'none';
+  document.getElementById('create-btn').style.display = '';
+  document.getElementById('new-tenant-name').focus();
+}
+
+function hideCreateModal() {
+  document.getElementById('create-modal').style.display = 'none';
+  loadTenants();
+}
+
+async function createTenant() {
+  const name = document.getElementById('new-tenant-name').value.trim();
+  const errEl = document.getElementById('create-error');
+  if (!name) { errEl.style.display = 'block'; errEl.textContent = 'Name is required'; return; }
+
+  const res = await api('POST', '/api/tenants', { name });
+  if (!res.success) {
+    errEl.style.display = 'block';
+    errEl.textContent = res.error.message;
+    return;
+  }
+
+  errEl.style.display = 'none';
+  document.getElementById('create-btn').style.display = 'none';
+  document.getElementById('new-tenant-name').disabled = true;
+  document.getElementById('create-result').style.display = 'block';
+  document.getElementById('create-result').innerHTML = `
+    <div style="margin-bottom:0.5rem;font-size:0.85rem;color:var(--text-secondary)">Tenant created. Save this API key — it won't be shown again:</div>
+    <div class="key-reveal">
+      <code id="new-key">${esc(res.data.api_key)}</code>
+      <button class="btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('new-key').textContent);toast('Copied!')">Copy</button>
+    </div>`;
+  toast('Tenant created');
+}
+
+document.getElementById('new-tenant-name').addEventListener('keydown', e => { if (e.key === 'Enter') createTenant(); });
+
+function showRotateModal(id, name) {
+  currentRotateId = id;
+  document.getElementById('rotate-tenant-name').textContent = name;
+  document.getElementById('rotate-result').style.display = 'none';
+  document.getElementById('rotate-btn').style.display = '';
+  document.getElementById('rotate-modal').style.display = 'flex';
+}
+
+function hideRotateModal() {
+  document.getElementById('rotate-modal').style.display = 'none';
+  loadTenants();
+}
+
+async function doRotate() {
+  const res = await api('POST', `/api/tenants/${currentRotateId}/rotate-key`);
+  if (!res.success) { toast(res.error.message, 'error'); return; }
+
+  document.getElementById('rotate-btn').style.display = 'none';
+  document.getElementById('rotate-result').style.display = 'block';
+  document.getElementById('rotate-result').innerHTML = `
+    <div style="margin-top:1rem;font-size:0.85rem;color:var(--text-secondary)">New API key:</div>
+    <div class="key-reveal">
+      <code id="rotated-key">${esc(res.data.api_key)}</code>
+      <button class="btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('rotated-key').textContent);toast('Copied!')">Copy</button>
+    </div>`;
+  toast('Key rotated');
+}
+</script>
+
+</body>
+</html>

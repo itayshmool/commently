@@ -18,6 +18,27 @@ router.post('/', adminAuth, validateCreateTenant, async (req, res, next) => {
   }
 });
 
+router.get('/', adminAuth, async (_req, res, next) => {
+  try {
+    const list = await tenants.list();
+    res.json({ success: true, data: list });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/:id/stats', adminAuth, async (req, res, next) => {
+  try {
+    const result = await tenants.stats(req.params.id);
+    if (!result) {
+      return next(new AppError('NOT_FOUND', 'Tenant not found', 404));
+    }
+    res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post('/:id/rotate-key', adminAuth, async (req, res, next) => {
   try {
     const result = await tenants.rotateKey(req.params.id);

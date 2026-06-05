@@ -47,4 +47,47 @@ async function rotateKey(id) {
   return { api_key: apiKey };
 }
 
-module.exports = { create, findByApiKey, rotateKey, generateApiKey, hashApiKey };
+async function list() {
+  const { rows } = await pool.query(
+    'SELECT id, name, api_key_prefix, created_at FROM tenants ORDER BY created_at DESC'
+  );
+  return rows;
+}
+
+async function stats(id) {
+  const { rows: tenant } = await pool.query(
+    'SELECT id, name, api_key_prefix, created_at FROM tenants WHERE id = $1',
+    [id]
+  );
+  if (tenant.length === 0) return null;
+
+  const { rows: [counts] } = await pool.query(
+    `SELECT
+       COUNT(*)::int AS total_comments,
+       COUNT(DISTINCT resource_id)::int AS total_resources,
+       COUNT(*) FILTER (WHERE deleted_at IS NOT NULL)::int AS deleted_comments
+     FROM comments WHERE tenant_id = $1`,
+    [id]
+  );
+
+  const { rows: recent } = await pool.query(
+    `SELECT id, resource_id, context_key, author_name, body, created_at
+     FROM comments
+     WHERE tenant_id = $1 AND deleted_at IS NULL
+     ORDER BY created_at DESC
+     LIMIT 10`,
+    [id]
+  );
+
+  return {
+    ...tenant[0],
+    stats: {
+      total_comments: counts.total_comments,
+      total_resources: counts.total_resources,
+      deleted_comments: counts.deleted_comments,
+    },
+    recent_comments: recent,
+  };
+}
+
+module.exports = { create, findByApiKey, rotateKey, list, stats, generateApiKey, hashApiKey };
