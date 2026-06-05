@@ -1,0 +1,31 @@
+{
+  "linkset": [
+    {
+      "anchor": "https://api.commently.live/",
+      "service-doc": [
+        {
+          "href": "https://commently.live/docs.html",
+          "type": "text/html"
+        }
+      ],
+      "service-desc": [
+        {
+          "href": "https://commently.live/llms.txt",
+          "type": "text/plain"
+        }
+      ],
+      "status": [
+        {
+          "href": "https://api.commently.live/health",
+          "type": "application/json"
+        }
+      ],
+      "auth-doc": [
+        {
+          "href": "https://commently.live/auth.md",
+          "type": "text/markdown"
+        }
+      ]
+    }
+  ]
+}

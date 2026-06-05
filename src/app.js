@@ -32,6 +32,16 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(requestLogger);
 
+app.use((_req, res, next) => {
+  res.header('Link', [
+    '<https://commently.live/.well-known/api-catalog>; rel="api-catalog"',
+    '<https://commently.live/docs.html>; rel="service-doc"',
+    '<https://commently.live/llms.txt>; rel="service-desc"',
+    '<https://commently.live/auth.md>; rel="auth-doc"',
+  ].join(', '));
+  next();
+});
+
 app.get('/health', async (_req, res) => {
   try {
     await pool.query('SELECT 1');
