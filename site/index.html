@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Commently — Comments as a Service</title>
+  <meta name="description" content="Self-hosted, multi-tenant comments API. Add threaded, context-anchored comments to any application in minutes.">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💬</text></svg>">
+</head>
+<body>
+
+<nav>
+  <a href="/" class="nav-logo">commently<span>_</span></a>
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#how-it-works">How it works</a></li>
+    <li><a href="#pricing">Pricing</a></li>
+    <li><a href="docs.html">Docs</a></li>
+    <li><a href="https://github.com/itayshmool/commently" class="btn btn-secondary">GitHub</a></li>
+  </ul>
+</nav>
+
+<!-- ── HERO ── -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-badge fade-up"><span class="dot"></span> Open source &middot; Self-hosted</div>
+    <h1 class="fade-up">Comments for<br><span class="accent">any application.</span></h1>
+    <p class="fade-up">One API, one database, every app. Commently is a generic comments service — add threaded, context-anchored discussions to anything you build.</p>
+    <div class="hero-actions fade-up">
+      <a href="docs.html" class="btn btn-primary">Read the docs →</a>
+      <a href="docs.html#quickstart" class="btn btn-secondary">Quick start</a>
+    </div>
+
+    <div class="hero-terminal fade-up">
+      <div class="terminal-bar">
+        <span class="terminal-dot"></span>
+        <span class="terminal-dot"></span>
+        <span class="terminal-dot"></span>
+        <span>bash</span>
+      </div>
+      <div class="terminal-body">
+        <div><span class="comment"># Post a comment from your app</span></div>
+        <div><span class="prompt">$ </span><span class="cmd">curl</span> <span class="flag">-X POST</span> <span class="string">http://localhost:3002/api/comments</span> \</div>
+        <div>&nbsp;&nbsp;<span class="flag">-H</span> <span class="string">"X-API-Key: $API_KEY"</span> \</div>
+        <div>&nbsp;&nbsp;<span class="flag">-d</span> <span class="string">'{"resource_id":"post-123","author_name":"Alice","body":"Great post!"}'</span></div>
+        <div style="margin-top: 0.75rem"><span class="output">{"success":true,"data":{"id":"c9a2f...","body":"Great post!","created_at":"..."}}</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FEATURES ── -->
+<section id="features">
+  <div class="container">
+    <span class="section-label">Features</span>
+    <h2 class="section-title">Built for developers,<br>designed for scale.</h2>
+    <p class="section-desc">Everything you need to add comments to your product — nothing you don't.</p>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <span class="feature-icon">01</span>
+        <h3>Multi-tenant</h3>
+        <p>Each consuming app gets its own API key. Data is fully isolated between tenants. One Commently instance serves all your products.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">02</span>
+        <h3>Resource-agnostic</h3>
+        <p>Comments attach to any opaque <code>resource_id</code> string. Commently never needs to know what a "deck", "post", or "lesson" is.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">03</span>
+        <h3>Context-anchored</h3>
+        <p>Pin comments to sub-locations with <code>context_key</code> — a slide, paragraph, or code line. The convention is yours to define.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">04</span>
+        <h3>Threaded</h3>
+        <p>One level of replies via <code>parent_id</code>. Clean, focused conversations without the chaos of deeply nested threads.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">05</span>
+        <h3>Stateless</h3>
+        <p>No sessions, no WebSocket, no Redis. Pure HTTP + PostgreSQL. Scale horizontally by adding more instances behind a load balancer.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">06</span>
+        <h3>Your auth, your rules</h3>
+        <p>Commently trusts your app to verify users. You pass <code>author_id</code> and decide who can comment on what. Zero lock-in.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── HOW IT WORKS ── -->
+<section id="how-it-works">
+  <div class="container">
+    <span class="section-label">Architecture</span>
+    <h2 class="section-title">How it works</h2>
+    <p class="section-desc">Your app authenticates users. Commently authenticates your app. All state lives in PostgreSQL.</p>
+
+    <div class="how-diagram">
+      <div class="flow-row">
+        <div class="flow-box">
+          <div class="label">Your app</div>
+          <div class="name">DeckDrop, Blog, Docs</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box active">
+          <div class="label">Comments service</div>
+          <div class="name">Commently API</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box">
+          <div class="label">Database</div>
+          <div class="name">PostgreSQL</div>
+        </div>
+      </div>
+      <div class="flow-details">
+        <div class="flow-detail">
+          <strong>Authentication</strong>
+          <span>Your app sends <code>X-API-Key</code> on every request. Keys are hashed with SHA-256 — the raw key is shown once at creation.</span>
+        </div>
+        <div class="flow-detail">
+          <strong>Mapping</strong>
+          <span><code>resource_id</code> = your entity's ID. <code>context_key</code> = sub-location. <code>author_id</code> = your user's identity.</span>
+        </div>
+        <div class="flow-detail">
+          <strong>Isolation</strong>
+          <span>Every query is scoped to the authenticated tenant. Tenant A can never read or mutate tenant B's data.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── PRICING ── -->
+<section id="pricing">
+  <div class="container" style="text-align: center;">
+    <span class="section-label">Pricing</span>
+    <h2 class="section-title">Self-hosted. Predictable cost.</h2>
+    <p class="section-desc" style="margin: 0 auto;">Deploy on Render.com in minutes. No per-seat, per-comment, or per-API-call charges. Ever.</p>
+
+    <div class="pricing-card" style="text-align: left;">
+      <div class="pricing-amount">$14<span>/mo</span></div>
+      <div class="pricing-desc">Everything included. No tiers, no limits.</div>
+      <ul class="pricing-items">
+        <li>Starter web service ($7/mo)</li>
+        <li>PostgreSQL Basic 256MB ($7/mo)</li>
+        <li>Unlimited tenants &amp; comments</li>
+        <li>Auto-deploy from GitHub</li>
+        <li>Horizontal scaling when you need it</li>
+        <li>Your data, your server, your rules</li>
+      </ul>
+      <a href="docs.html#quickstart" class="btn btn-primary" style="width: 100%; justify-content: center;">Deploy now →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA ── -->
+<section class="cta">
+  <div class="container">
+    <h2>Add comments to your<br>app in 10 minutes.</h2>
+    <p>Clone the repo, run the migration, start posting comments. It really is that simple.</p>
+    <div class="hero-actions">
+      <a href="docs.html#quickstart" class="btn btn-primary">Get started →</a>
+      <a href="https://github.com/itayshmool/commently" class="btn btn-secondary">View on GitHub</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <span>commently_ &copy; 2026</span>
+      <ul class="footer-links">
+        <li><a href="docs.html">Docs</a></li>
+        <li><a href="https://github.com/itayshmool/commently">GitHub</a></li>
+        <li><a href="docs.html#integration">Integration guide</a></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+
+<script>
+document.querySelectorAll('.fade-up').forEach(el => {
+  const obs = new IntersectionObserver(([e]) => {
+    if (e.isIntersecting) { el.style.animationPlayState = 'running'; obs.unobserve(el); }
+  }, { threshold: 0.1 });
+  el.style.animationPlayState = 'paused';
+  obs.observe(el);
+});
+</script>
+
+</body>
+</html>

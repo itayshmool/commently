@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Docs — Commently</title>
+  <meta name="description" content="Commently API reference, authentication guide, and integration examples.">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💬</text></svg>">
+</head>
+<body>
+
+<nav>
+  <a href="/" class="nav-logo">commently<span>_</span></a>
+  <ul class="nav-links">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="docs.html" class="active">Docs</a></li>
+    <li><a href="https://github.com/itayshmool/commently" class="btn btn-secondary">GitHub</a></li>
+  </ul>
+</nav>
+
+<div class="container">
+<div class="docs-layout">
+
+<!-- ── SIDEBAR ── -->
+<aside class="docs-sidebar">
+  <h4>Getting Started</h4>
+  <a href="#quickstart">Quick start</a>
+  <a href="#authentication">Authentication</a>
+  <a href="#response-format">Response format</a>
+
+  <h4>Tenant API</h4>
+  <a href="#create-tenant">Create tenant</a>
+  <a href="#rotate-key">Rotate API key</a>
+
+  <h4>Comments API</h4>
+  <a href="#create-comment">Create comment</a>
+  <a href="#list-comments">List comments</a>
+  <a href="#comment-counts">Get counts</a>
+  <a href="#delete-comment">Delete comment</a>
+
+  <h4>Guides</h4>
+  <a href="#integration">Integration guide</a>
+  <a href="#threading">Threading</a>
+  <a href="#context-keys">Context keys</a>
+  <a href="#error-codes">Error codes</a>
+</aside>
+
+<!-- ── CONTENT ── -->
+<main class="docs-content">
+
+<h1 id="quickstart">Quick start</h1>
+<p>Get Commently running locally in under 5 minutes. You need Node.js 20+ and PostgreSQL 16+.</p>
+
+<div class="code-block">
+  <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+  <pre><span class="comment"># Clone and install</span>
+git clone https://github.com/itayshmool/commently.git
+cd commently
+npm install
+
+<span class="comment"># Create the database</span>
+createdb commently
+
+<span class="comment"># Configure</span>
+cp .env.example .env
+<span class="comment"># Edit .env — set DATABASE_URL and ADMIN_API_KEY</span>
+
+<span class="comment"># Run migrations and start</span>
+npm run db:migrate
+npm run dev
+<span class="comment"># → Commently listening on port 3002</span></pre>
+</div>
+
+<p>Once running, register your first tenant:</p>
+
+<div class="code-block">
+  <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+  <pre>curl -X POST http://localhost:3002/api/tenants \
+  -H <span class="str">"Authorization: Bearer YOUR_ADMIN_KEY"</span> \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"name": "my-app"}'</span>
+
+<span class="comment"># → {"success":true,"data":{"id":"...","name":"my-app","api_key":"sk_commently_..."}}</span>
+<span class="comment"># Save the api_key — it's shown only once.</span></pre>
+</div>
+
+<!-- ── AUTH ── -->
+<h2 id="authentication">Authentication</h2>
+
+<p>Commently uses two authentication mechanisms:</p>
+
+<h3>Tenant API keys (for your app)</h3>
+<p>Every request from your application must include the <code>X-API-Key</code> header. Keys use the format <code>sk_commently_&lt;32 random chars&gt;</code> and are stored as SHA-256 hashes.</p>
+
+<div class="code-block">
+  <div class="code-header"><span class="lang">http</span></div>
+  <pre>X-API-Key: sk_commently_abc123def456...</pre>
+</div>
+
+<h3>Admin key (for tenant management)</h3>
+<p>Tenant management endpoints require the master admin key set via the <code>ADMIN_API_KEY</code> environment variable, passed in the <code>Authorization</code> header:</p>
+
+<div class="code-block">
+  <div class="code-header"><span class="lang">http</span></div>
+  <pre>Authorization: Bearer your-admin-key</pre>
+</div>
+
+<div class="info-box">
+  <strong>Note:</strong> Commently does not handle user authentication. Your app verifies its own users and passes <code>author_id</code> / <code>author_name</code> with each request. Commently only verifies that your <em>app</em> is who it says it is.
+</div>
+
+<!-- ── RESPONSE FORMAT ── -->
+<h2 id="response-format">Response format</h2>
+
+<p>All responses follow a consistent envelope:</p>
+
+<div class="code-block">
+  <div class="code-header"><span class="lang">json</span><span>Success</span></div>
+  <pre>{
+  <span class="key">"success"</span>: <span class="num">true</span>,
+  <span class="key">"data"</span>: { ... }
+}</pre>
+</div>
+
+<div class="code-block">
+  <div class="code-header"><span class="lang">json</span><span>Error</span></div>
+  <pre>{
+  <span class="key">"success"</span>: <span class="num">false</span>,
+  <span class="key">"error"</span>: {
+    <span class="key">"code"</span>: <span class="str">"NOT_FOUND"</span>,
+    <span class="key">"message"</span>: <span class="str">"Comment not found"</span>
+  }
+}</pre>
+</div>
+
+<!-- ── CREATE TENANT ── -->
+<h2 id="create-tenant">Create tenant</h2>
+<div class="endpoint-badge">
+  <span class="method post">POST</span>
+  <span class="endpoint-path">/api/tenants</span>
+</div>
+<p>Register a new consuming application. Requires admin authentication.</p>
+
+<table class="param-table">
+  <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td>name <span class="required">required</span></td><td><span class="type">string</span></td><td>Unique human-readable identifier for the tenant</td></tr>
+  </tbody>
+</table>
+
+<div class="code-block">
+  <div class="code-header"><span class="lang">bash</span><span>Request</span></div>
+  <pre>curl -X POST http://localhost:3002/api/tenants \
+  -H <span class="str">"Authorization: Bearer $ADMIN_KEY"</span> \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"name": "deckdrop"}'</span></pre>
+</div>
+
+<div class="code-block">
+  <div class="code-header"><span class="lang">json</span><span>Response 201</span></div>
+  <pre>{
+  <span class="key">"success"</span>: <span class="num">true</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"id"</span>: <span class="str">"a1b2c3d4-..."</span>,
+    <span class="key">"name"</span>: <span class="str">"deckdrop"</span>,
+    <span class="key">"api_key"</span>: <span class="str">"sk_commently_abc123..."</span>
+  }
+}</pre>
+</div>
+
+<div class="info-box">
+  <strong>Important:</strong> The <code>api_key</code> is returned <strong>only in this response</strong>. Store it securely — it cannot be retrieved later.
+</div>
+
+<!-- ── ROTATE KEY ── -->
+<h2 id="rotate-key">Rotate API key</h2>
+<div class="endpoint-badge">
+  <span class="method post">POST</span>
+  <span class="endpoint-path">/api/tenants/:id/rotate-key</span>
+</div>
+<p>Generate a new API key for a tenant. The previous key is invalidated immediately. Requires admin authentication.</p>
+
+<div class="code-block">
+  <div class="code-header"><span class="lang">bash</span><span>Request</span></div>
+  <pre>curl -X POST http://localhost:3002/api/tenants/$TENANT_ID/rotate-key \
+  -H <span class="str">"Authorization: Bearer $ADMIN_KEY"</span></pre>
+</div>
+
+<div class="code-block">
+  <div class="code-header"><span class="lang">json</span><span>Response 200</span></div>
+  <pre>{
+  <span class="key">"success"</span>: <span class="num">true</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"api_key"</span>: <span class="str">"sk_commently_newkey..."</span>
+  }
+}</pre>
+</div>
+
+<!-- ── CREATE COMMENT ── -->
+<h2 id="create-comment">Create comment</h2>
+<div class="endpoint-badge">
+  <span class="method post">POST</span>
+  <span class="endpoint-path">/api/comments</span>
+</div>
+<p>Post a new comment or reply. Requires tenant API key.</p>
+
+<table class="param-table">
+  <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td>resource_id <span class="required">required</span></td><td><span class="type">string</span></td><td>Opaque ID of the resource being commented on (max 500 chars)</td></tr>
+    <tr><td>author_id <span class="required">required</span></td><td><span class="type">string</span></td><td>Your app's user identifier (max 500 chars)</td></tr>
+    <tr><td>author_name <span class="required">required</span></td><td><span class="type">string</span></td><td>Display name of the comment author</td></tr>
+    <tr><td>body <span class="required">required</span></td><td><span class="type">string</span></td><td>Comment content (1–5000 characters)</td></tr>
+    <tr><td>context_key</td><td><span class="type">string</span></td><td>Sub-anchor within the resource, e.g. <code>slide:3</code> (max 200 chars)</td></tr>
+    <tr><td>author_role</td><td><span class="type">string</span></td><td>Role label, e.g. <code>owner</code>, <code>viewer</code></td></tr>
+    <tr><td>parent_id</td><td><span class="type">uuid</span></td><td>ID of parent comment for threading (must be on same resource, no nested replies)</td></tr>
+  </tbody>
+</table>
+
+<div class="code-block">
+  <div class="code-header"><span class="lang">bash</span><span>Request</span></div>
+  <pre>curl -X POST http://localhost:3002/api/comments \
+  -H <span class="str">"X-API-Key: $API_KEY"</span> \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "resource_id": "deck-uuid-123",
+    "context_key": "slide:3",
+    "author_id": "viewer@gmail.com",
+    "author_name": "Dana",
+    "author_role": "viewer",
+    "body": "Love this chart!"
+  }'</span></pre>
+</div>
+
+<div class="code-block">
+  <div class="code-header"><span class="lang">json</span><span>Response 201</span></div>
+  <pre>{
+  <span class="key">"success"</span>: <span class="num">true</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"id"</span>: <span class="str">"c9a2f1b3-..."</span>,
+    <span class="key">"resource_id"</span>: <span class="str">"deck-uuid-123"</span>,
+    <span class="key">"context_key"</span>: <span class="str">"slide:3"</span>,
+    <span class="key">"author_id"</span>: <span class="str">"viewer@gmail.com"</span>,
+    <span class="key">"author_name"</span>: <span class="str">"Dana"</span>,
+    <span class="key">"author_role"</span>: <span class="str">"viewer"</span>,
+    <span class="key">"body"</span>: <span class="str">"Love this chart!"</span>,
+    <span class="key">"parent_id"</span>: <span class="num">null</span>,
+    <span class="key">"created_at"</span>: <span class="str">"2026-06-05T10:30:00Z"</span>
+  }
+}</pre>
+</div>
+
+<!-- ── LIST COMMENTS ── -->
+<h2 id="list-comments">List comments</h2>
+<div class="endpoint-badge">
+  <span class="method get">GET</span>
+  <span class="endpoint-path">/api/comments</span>
+</div>
+<p>Fetch comments for a resource. Replies are nested under their parent (one level deep). Results are in chronological order with cursor-based pagination.</p>
+
+<table class="param-table">
+  <thead><tr><th>Param</th><th>Type</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td>resource_id <span class="required">required</span></td><td><span class="type">string</span></td><td>The resource to fetch comments for</td></tr>
+    <tr><td>context_key</td><td><span class="type">string</span></td><td>Filter to a specific context, e.g. <code>slide:3</code></td></tr>
+    <tr><td>cursor</td><td><span class="type">uuid</span></td><td>Pagination cursor (ID of last item from previous page)</td></tr>
+    <tr><td>limit</td><td><span class="type">integer</span></td><td>Max results per page (default 50, max 100)</td></tr>
+  </tbody>
+</table>
+
+<div class="code-block">
+  <div class="code-header"><span class="lang">bash</span><span>Request</span></div>
+  <pre>curl <span class="str">"http://localhost:3002/api/comments?resource_id=deck-uuid-123&context_key=slide:3"</span> \
+  -H <span class="str">"X-API-Key: $API_KEY"</span></pre>
+</div>
+
+<div class="code-block">
+  <div class="code-header"><span class="lang">json</span><span>Response 200</span></div>
+  <pre>{
+  <span class="key">"success"</span>: <span class="num">true</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"comments"</span>: [
+      {
+        <span class="key">"id"</span>: <span class="str">"c9a2f1b3-..."</span>,
+        <span class="key">"resource_id"</span>: <span class="str">"deck-uuid-123"</span>,
+        <span class="key">"context_key"</span>: <span class="str">"slide:3"</span>,
+        <span class="key">"author_id"</span>: <span class="str">"viewer@gmail.com"</span>,
+        <span class="key">"author_name"</span>: <span class="str">"Dana"</span>,
+        <span class="key">"author_role"</span>: <span class="str">"viewer"</span>,
+        <span class="key">"body"</span>: <span class="str">"Love this chart!"</span>,
+        <span class="key">"parent_id"</span>: <span class="num">null</span>,
+        <span class="key">"created_at"</span>: <span class="str">"2026-06-05T10:30:00Z"</span>,
+        <span class="key">"replies"</span>: [
+          {
+            <span class="key">"id"</span>: <span class="str">"d4e5f6a7-..."</span>,
+            <span class="key">"author_id"</span>: <span class="str">"itay@wix.com"</span>,
+            <span class="key">"author_name"</span>: <span class="str">"Itay"</span>,
+            <span class="key">"author_role"</span>: <span class="str">"owner"</span>,
+            <span class="key">"body"</span>: <span class="str">"Thanks! Data is from Q3 report"</span>,
+            <span class="key">"parent_id"</span>: <span class="str">"c9a2f1b3-..."</span>,
+            <span class="key">"created_at"</span>: <span class="str">"2026-06-05T10:32:00Z"</span>
+          }
+        ]
+      }
+    ],
+    <span class="key">"pagination"</span>: {
+      <span class="key">"next_cursor"</span>: <span class="str">"c9a2f1b3-..."</span>,
+      <span class="key">"has_more"</span>: <span class="num">false</span>
+    }
+  }
+}</pre>
+</div>
+
+<!-- ── COUNTS ── -->
+<h2 id="comment-counts">Get comment counts</h2>
+<div class="endpoint-badge">
+  <span class="method get">GET</span>
+  <span class="endpoint-path">/api/comments/counts</span>
+</div>
+<p>Get total comment counts for one or more resources, optionally grouped by context key. Useful for rendering badges and indicators.</p>
+
+<table class="param-table">
+  <thead><tr><th>Param</th><th>Type</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td>resource_id</td><td><span class="type">string</span></td><td>Single resource ID</td></tr>
+    <tr><td>resource_ids</td><td><span class="type">string</span></td><td>Comma-separated list of IDs (batch mode, max 50)</td></tr>
+    <tr><td>group_by</td><td><span class="type">string</span></td><td>Set to <code>context_key</code> for per-context counts</td></tr>
+  </tbody>
+</table>
+
+<div class="code-block">
+  <div class="code-header"><span class="lang">bash</span><span>Grouped by context</span></div>
+  <pre>curl <span class="str">"http://localhost:3002/api/comments/counts?resource_id=deck-uuid-123&group_by=context_key"</span> \
+  -H <span class="str">"X-API-Key: $API_KEY"</span></pre>
+</div>
+
+<div class="code-block">
+  <div class="code-header"><span class="lang">json</span><span>Response 200</span></div>
+  <pre>{
+  <span class="key">"success"</span>: <span class="num">true</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"total"</span>: <span class="num">8</span>,
+    <span class="key">"groups"</span>: {
+      <span class="key">"slide:0"</span>: <span class="num">2</span>,
+      <span class="key">"slide:3"</span>: <span class="num">5</span>,
+      <span class="key">"slide:7"</span>: <span class="num">1</span>
+    }
+  }
+}</pre>
+</div>
+
+<div class="code-block">
+  <div class="code-header"><span class="lang">bash</span><span>Batch mode</span></div>
+  <pre>curl <span class="str">"http://localhost:3002/api/comments/counts?resource_ids=deck-1,deck-2,deck-3"</span> \
+  -H <span class="str">"X-API-Key: $API_KEY"</span></pre>
+</div>
+
+<div class="code-block">
+  <div class="code-header"><span class="lang">json</span><span>Response 200</span></div>
+  <pre>{
+  <span class="key">"success"</span>: <span class="num">true</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"counts"</span>: {
+      <span class="key">"deck-1"</span>: <span class="num">8</span>,
+      <span class="key">"deck-2"</span>: <span class="num">3</span>,
+      <span class="key">"deck-3"</span>: <span class="num">0</span>
+    }
+  }
+}</pre>
+</div>
+
+<!-- ── DELETE ── -->
+<h2 id="delete-comment">Delete comment</h2>
+<div class="endpoint-badge">
+  <span class="method delete">DELETE</span>
+  <span class="endpoint-path">/api/comments/:id</span>
+</div>
+<p>Soft-delete a comment. Deleted comments are excluded from all list and count queries. Replies to a deleted parent remain visible — your app can render the parent as "[deleted]".</p>
+
+<div class="code-block">
+  <div class="code-header"><span class="lang">bash</span><span>Request</span></div>
+  <pre>curl -X DELETE <span class="str">"http://localhost:3002/api/comments/$COMMENT_ID"</span> \
+  -H <span class="str">"X-API-Key: $API_KEY"</span></pre>
+</div>
+
+<div class="code-block">
+  <div class="code-header"><span class="lang">json</span><span>Response 200</span></div>
+  <pre>{
+  <span class="key">"success"</span>: <span class="num">true</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"id"</span>: <span class="str">"c9a2f1b3-..."</span>,
+    <span class="key">"deleted_at"</span>: <span class="str">"2026-06-05T11:00:00Z"</span>
+  }
+}</pre>
+</div>
+
+<!-- ── INTEGRATION GUIDE ── -->
+<h2 id="integration">Integration guide</h2>
+<p>Here's how to integrate Commently into your app. This example uses a Node.js backend, but Commently works with any language that can make HTTP requests.</p>
+
+<h3>1. Set up a Commently client</h3>
+
+<div class="code-block">
+  <div class="code-header"><span class="lang">javascript</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+  <pre><span class="kw">const</span> COMMENTLY_URL = process.env.COMMENTLY_URL || <span class="str">'http://localhost:3002'</span>;
+<span class="kw">const</span> COMMENTLY_KEY = process.env.COMMENTLY_API_KEY;
+
+<span class="kw">async function</span> <span class="fn">commently</span>(method, path, body) {
+  <span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">`<span class="op">${</span>COMMENTLY_URL<span class="op">}</span><span class="op">${</span>path<span class="op">}</span>`</span>, {
+    method,
+    headers: {
+      <span class="str">'X-API-Key'</span>: COMMENTLY_KEY,
+      <span class="str">'Content-Type'</span>: <span class="str">'application/json'</span>,
+    },
+    body: body ? JSON.<span class="fn">stringify</span>(body) : <span class="num">undefined</span>,
+  });
+  <span class="kw">return</span> res.<span class="fn">json</span>();
+}</pre>
+</div>
+
+<h3>2. Post a comment from your app</h3>
+
+<div class="code-block">
+  <div class="code-header"><span class="lang">javascript</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+  <pre><span class="comment">// In your app's comment handler — after verifying the user is authenticated</span>
+app.<span class="fn">post</span>(<span class="str">'/api/my-app/comments'</span>, <span class="kw">async</span> (req, res) <span class="op">=></span> {
+  <span class="kw">const</span> user = req.user; <span class="comment">// your auth</span>
+  <span class="kw">const</span> { resourceId, contextKey, body } = req.body;
+
+  <span class="kw">const</span> result = <span class="kw">await</span> <span class="fn">commently</span>(<span class="str">'POST'</span>, <span class="str">'/api/comments'</span>, {
+    resource_id: resourceId,
+    context_key: contextKey,
+    author_id: user.email,
+    author_name: user.displayName,
+    author_role: user.role, <span class="comment">// "owner", "viewer", etc.</span>
+    body,
+  });
+
+  res.<span class="fn">json</span>(result);
+});</pre>
+</div>
+
+<h3>3. Fetch comments for a page</h3>
+
+<div class="code-block">
+  <div class="code-header"><span class="lang">javascript</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+  <pre>app.<span class="fn">get</span>(<span class="str">'/api/my-app/comments'</span>, <span class="kw">async</span> (req, res) <span class="op">=></span> {
+  <span class="kw">const</span> { resourceId, contextKey, cursor } = req.query;
+
+  <span class="kw">const</span> params = <span class="kw">new</span> <span class="fn">URLSearchParams</span>({ resource_id: resourceId });
+  <span class="kw">if</span> (contextKey) params.<span class="fn">set</span>(<span class="str">'context_key'</span>, contextKey);
+  <span class="kw">if</span> (cursor) params.<span class="fn">set</span>(<span class="str">'cursor'</span>, cursor);
+
+  <span class="kw">const</span> result = <span class="kw">await</span> <span class="fn">commently</span>(<span class="str">'GET'</span>, <span class="str">`/api/comments?<span class="op">${</span>params<span class="op">}</span>`</span>);
+  res.<span class="fn">json</span>(result);
+});</pre>
+</div>
+
+<h3>4. Show comment count badges</h3>
+
+<div class="code-block">
+  <div class="code-header"><span class="lang">javascript</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+  <pre><span class="comment">// Get counts per slide for a deck</span>
+<span class="kw">const</span> counts = <span class="kw">await</span> <span class="fn">commently</span>(
+  <span class="str">'GET'</span>,
+  <span class="str">`/api/comments/counts?resource_id=<span class="op">${</span>deckId<span class="op">}</span>&group_by=context_key`</span>
+);
+
+<span class="comment">// counts.data.groups → { "slide:0": 2, "slide:3": 5 }</span>
+<span class="comment">// Use these to render badges on each slide thumbnail</span>
+
+<span class="comment">// Batch mode — get total counts for a list of decks</span>
+<span class="kw">const</span> batch = <span class="kw">await</span> <span class="fn">commently</span>(
+  <span class="str">'GET'</span>,
+  <span class="str">`/api/comments/counts?resource_ids=<span class="op">${</span>deckIds.<span class="fn">join</span>(<span class="str">','</span>)<span class="op">}</span>`</span>
+);
+<span class="comment">// batch.data.counts → { "deck-1": 8, "deck-2": 3 }</span></pre>
+</div>
+
+<!-- ── THREADING ── -->
+<h2 id="threading">Threading</h2>
+<p>Commently supports one level of replies. A comment can have replies, but a reply cannot have replies of its own.</p>
+
+<div class="code-block">
+  <div class="code-header"><span class="lang">javascript</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+  <pre><span class="comment">// Create a reply</span>
+<span class="kw">await</span> <span class="fn">commently</span>(<span class="str">'POST'</span>, <span class="str">'/api/comments'</span>, {
+  resource_id: <span class="str">'deck-uuid-123'</span>,
+  context_key: <span class="str">'slide:3'</span>,
+  author_id: <span class="str">'bob@example.com'</span>,
+  author_name: <span class="str">'Bob'</span>,
+  body: <span class="str">'Agreed!'</span>,
+  parent_id: <span class="str">'c9a2f1b3-...'</span>, <span class="comment">// ID of the parent comment</span>
+});</pre>
+</div>
+
+<div class="info-box">
+  <strong>Rules:</strong> The <code>parent_id</code> must reference an existing, non-deleted comment on the same <code>resource_id</code>. Replies to replies (nested threading) are rejected with a <code>VALIDATION_ERROR</code>.
+</div>
+
+<!-- ── CONTEXT KEYS ── -->
+<h2 id="context-keys">Context keys</h2>
+<p>Context keys let you anchor comments to sub-locations within a resource. The format is a free-form string — you define the convention that makes sense for your app.</p>
+
+<table class="param-table">
+  <thead><tr><th>App type</th><th>context_key pattern</th><th>Example</th></tr></thead>
+  <tbody>
+    <tr><td>Slide deck</td><td><code>slide:{index}</code></td><td><code>slide:3</code></td></tr>
+    <tr><td>Blog post</td><td><code>paragraph:{number}</code></td><td><code>paragraph:12</code></td></tr>
+    <tr><td>Tutorial</td><td><code>step:{slug}</code></td><td><code>step:setup-db</code></td></tr>
+    <tr><td>Code review</td><td><code>file:{path}:line:{n}</code></td><td><code>file:src/app.js:line:42</code></td></tr>
+    <tr><td>Video</td><td><code>t:{seconds}</code></td><td><code>t:127</code></td></tr>
+  </tbody>
+</table>
+
+<!-- ── ERROR CODES ── -->
+<h2 id="error-codes">Error codes</h2>
+
+<table class="param-table">
+  <thead><tr><th>Code</th><th>HTTP Status</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><code>VALIDATION_ERROR</code></td><td>400</td><td>Missing or invalid request fields</td></tr>
+    <tr><td><code>INVALID_JSON</code></td><td>400</td><td>Request body is not valid JSON</td></tr>
+    <tr><td><code>UNAUTHORIZED</code></td><td>401</td><td>Missing, invalid, or expired API key</td></tr>
+    <tr><td><code>NOT_FOUND</code></td><td>404</td><td>Resource, comment, or tenant not found</td></tr>
+    <tr><td><code>CONFLICT</code></td><td>409</td><td>Duplicate tenant name</td></tr>
+    <tr><td><code>INTERNAL_ERROR</code></td><td>500</td><td>Unexpected server error</td></tr>
+  </tbody>
+</table>
+
+</main>
+</div>
+</div>
+
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <span>commently_ &copy; 2026</span>
+      <ul class="footer-links">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="https://github.com/itayshmool/commently">GitHub</a></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+
+<script>
+function copyCode(btn) {
+  const pre = btn.closest('.code-block').querySelector('pre');
+  navigator.clipboard.writeText(pre.textContent);
+  btn.textContent = 'Copied!';
+  setTimeout(() => btn.textContent = 'Copy', 1500);
+}
+
+const sidebarLinks = document.querySelectorAll('.docs-sidebar a');
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      sidebarLinks.forEach(l => l.classList.remove('active'));
+      const active = document.querySelector(`.docs-sidebar a[href="#${entry.target.id}"]`);
+      if (active) active.classList.add('active');
+    }
+  });
+}, { rootMargin: '-80px 0px -60% 0px' });
+
+document.querySelectorAll('.docs-content h1[id], .docs-content h2[id]').forEach(h => observer.observe(h));
+</script>
+
+</body>
+</html>
