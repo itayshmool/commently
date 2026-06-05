@@ -122,14 +122,55 @@ async function counts(tenantId, { resource_id, resource_ids, group_by }) {
   return { total: rows[0].total };
 }
 
-async function softDelete(tenantId, commentId) {
+async function softDelete(tenantId, commentId, deletedBy = null) {
   const { rows } = await pool.query(
-    `UPDATE comments SET deleted_at = NOW()
+    `UPDATE comments SET deleted_at = NOW(), deleted_by = $3
      WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL
-     RETURNING id, deleted_at`,
-    [commentId, tenantId]
+     RETURNING id, deleted_at, deleted_by`,
+    [commentId, tenantId, deletedBy]
   );
   return rows[0] || null;
 }
 
-module.exports = { create, findById, list, counts, softDelete };
+const EDIT_WINDOW_MS = parseInt(process.env.COMMENT_EDIT_WINDOW_MINUTES || '15', 10) * 60 * 1000;
+
+async function edit(tenantId, commentId, authorId, newBody) {
+  const comment = await findById(tenantId, commentId);
+  if (!comment || comment.deleted_at) return { error: 'NOT_FOUND' };
+  if (comment.author_id !== authorId) return { error: 'FORBIDDEN' };
+
+  const elapsed = Date.now() - new Date(comment.created_at).getTime();
+  if (elapsed > EDIT_WINDOW_MS) return { error: 'WINDOW_EXPIRED' };
+
+  const { rows } = await pool.query(
+    `UPDATE comments SET body = $1, updated_at = NOW(), edited_at = NOW()
+     WHERE id = $2 AND tenant_id = $3
+     RETURNING id, resource_id, context_key, author_id, author_name, author_role, body, parent_id, created_at, edited_at`,
+    [newBody, commentId, tenantId]
+  );
+  return { data: rows[0] };
+}
+
+async function exportByResource(tenantId, resourceId) {
+  const { rows } = await pool.query(
+    `SELECT id, resource_id, context_key, author_id, author_name, author_role, body, parent_id, created_at, edited_at, deleted_at, deleted_by
+     FROM comments
+     WHERE tenant_id = $1 AND resource_id = $2
+     ORDER BY created_at ASC`,
+    [tenantId, resourceId]
+  );
+  return rows;
+}
+
+async function exportByTenant(tenantId) {
+  const { rows } = await pool.query(
+    `SELECT id, resource_id, context_key, author_id, author_name, author_role, body, parent_id, created_at, edited_at, deleted_at, deleted_by
+     FROM comments
+     WHERE tenant_id = $1
+     ORDER BY created_at ASC`,
+    [tenantId]
+  );
+  return rows;
+}
+
+module.exports = { create, findById, list, counts, softDelete, edit, exportByResource, exportByTenant, EDIT_WINDOW_MS };

@@ -1,10 +1,13 @@
 const { Router } = require('express');
 const { adminAuth } = require('../middleware/auth');
+const { adminRateLimit } = require('../middleware/rate-limit');
 const { validateCreateTenant } = require('../middleware/validate');
 const { AppError } = require('../middleware/errors');
 const tenants = require('../db/tenants');
 
 const router = Router();
+
+router.use(adminRateLimit);
 
 router.post('/', adminAuth, validateCreateTenant, async (req, res, next) => {
   try {
@@ -46,6 +49,18 @@ router.post('/:id/rotate-key', adminAuth, async (req, res, next) => {
       return next(new AppError('NOT_FOUND', 'Tenant not found', 404));
     }
     res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete('/:id', adminAuth, async (req, res, next) => {
+  try {
+    const removed = await tenants.remove(req.params.id);
+    if (!removed) {
+      return next(new AppError('NOT_FOUND', 'Tenant not found', 404));
+    }
+    res.json({ success: true, data: { id: req.params.id, deleted: true } });
   } catch (err) {
     next(err);
   }

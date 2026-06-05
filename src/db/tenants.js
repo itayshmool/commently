@@ -90,4 +90,20 @@ async function stats(id) {
   };
 }
 
-module.exports = { create, findByApiKey, rotateKey, list, stats, generateApiKey, hashApiKey };
+async function remove(id) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('DELETE FROM comments WHERE tenant_id = $1', [id]);
+    const { rowCount } = await client.query('DELETE FROM tenants WHERE id = $1', [id]);
+    await client.query('COMMIT');
+    return rowCount > 0;
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+module.exports = { create, findByApiKey, rotateKey, list, stats, remove, generateApiKey, hashApiKey };
