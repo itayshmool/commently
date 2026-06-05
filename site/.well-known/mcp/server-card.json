@@ -1,0 +1,37 @@
+{
+  "serverInfo": {
+    "name": "Commently",
+    "version": "1.0.0",
+    "description": "Self-hosted, multi-tenant comments-as-a-service API"
+  },
+  "url": "https://api.commently.live",
+  "documentation": "https://commently.live/docs.html",
+  "capabilities": {
+    "comments": {
+      "create": "POST /api/comments",
+      "list": "GET /api/comments",
+      "edit": "PATCH /api/comments/:id",
+      "delete": "DELETE /api/comments/:id",
+      "counts": "GET /api/comments/counts"
+    },
+    "reactions": {
+      "add": "POST /api/comments/:id/reactions",
+      "list": "GET /api/comments/:id/reactions",
+      "remove": "DELETE /api/comments/:id/reactions"
+    },
+    "webhooks": {
+      "create": "POST /api/webhooks",
+      "list": "GET /api/webhooks",
+      "delete": "DELETE /api/webhooks/:id"
+    },
+    "export": {
+      "resource": "GET /api/export/resource",
+      "tenant": "GET /api/export/tenant/:id"
+    }
+  },
+  "authentication": {
+    "type": "api-key",
+    "header": "X-API-Key",
+    "documentation": "https://commently.live/auth.md"
+  }
+}

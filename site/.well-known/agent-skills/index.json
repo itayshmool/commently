@@ -1,0 +1,35 @@
+{
+  "$schema": "https://agentskills.io/schema/v0.2.0/index.json",
+  "skills": [
+    {
+      "name": "comments-api",
+      "type": "api",
+      "description": "Create, list, edit, and delete threaded comments on any resource",
+      "url": "https://commently.live/docs.html#create-comment"
+    },
+    {
+      "name": "reactions-api",
+      "type": "api",
+      "description": "Add, list, and remove emoji reactions on comments",
+      "url": "https://commently.live/docs.html#add-reaction"
+    },
+    {
+      "name": "webhooks-api",
+      "type": "api",
+      "description": "Register webhooks for comment.created and comment.deleted events",
+      "url": "https://commently.live/docs.html#create-webhook"
+    },
+    {
+      "name": "export-api",
+      "type": "api",
+      "description": "Bulk export comments per resource or per tenant",
+      "url": "https://commently.live/docs.html#export-resource"
+    },
+    {
+      "name": "tenant-management",
+      "type": "api",
+      "description": "Create, list, delete tenants and rotate API keys (admin only)",
+      "url": "https://commently.live/docs.html#create-tenant"
+    }
+  ]
+}
