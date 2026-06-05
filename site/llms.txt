@@ -1,0 +1,56 @@
+# Commently
+
+> Self-hosted comments-as-a-service. Add threaded, context-anchored comments to any application.
+
+Commently is an open-source, multi-tenant REST API that provides generic commenting functionality. It is resource-agnostic — it stores comments against opaque identifiers that your application defines. One Commently instance can serve multiple applications, each isolated by API key.
+
+## Key Features
+
+- Multi-tenant: each consuming app gets its own API key with full data isolation
+- Resource-agnostic: comments attach to any string identifier (resource_id)
+- Context-anchored: optional sub-location anchoring via context_key (e.g. slide:3, paragraph:12)
+- Threaded: one level of replies via parent_id
+- Emoji reactions: per-comment reactions with grouped counts
+- Comment editing: time-windowed editing (default 15 minutes, author-only)
+- Webhooks: HTTP notifications on comment.created and comment.deleted with HMAC signing
+- Bulk export: export comments per resource or per tenant
+- Soft deletes: deleted comments are excluded from queries but preserved in the database
+
+## Tech Stack
+
+- Runtime: Node.js + Express
+- Database: PostgreSQL (raw SQL, no ORM)
+- Auth: API key per tenant (SHA-256 hashed), admin key for management
+- Deployment: Render.com (web service + PostgreSQL + static site)
+
+## API Endpoints
+
+### Admin (Authorization: Bearer header)
+- POST /api/tenants — create tenant
+- GET /api/tenants — list tenants
+- GET /api/tenants/:id/stats — tenant statistics
+- POST /api/tenants/:id/rotate-key — rotate API key
+- DELETE /api/tenants/:id — delete tenant and all data
+- GET /api/export/tenant/:id — export all tenant comments
+
+### Tenant (X-API-Key header)
+- POST /api/comments — create comment
+- GET /api/comments — list comments (cursor pagination)
+- GET /api/comments/counts — comment counts (grouped or batch)
+- PATCH /api/comments/:id — edit comment
+- DELETE /api/comments/:id — soft-delete comment
+- POST /api/comments/:id/reactions — add emoji reaction
+- GET /api/comments/:id/reactions — list reactions
+- DELETE /api/comments/:id/reactions — remove reaction
+- POST /api/webhooks — register webhook
+- GET /api/webhooks — list webhooks
+- DELETE /api/webhooks/:id — delete webhook
+- GET /api/export/resource — export resource comments
+
+## Links
+
+- Website: https://commently.live
+- Documentation: https://commently.live/docs.html
+- API: https://api.commently.live
+- GitHub: https://github.com/itayshmool/commently
+- License: MIT

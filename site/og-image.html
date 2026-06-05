@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  width: 1200px;
+  height: 630px;
+  background: #0a0a0f;
+  font-family: -apple-system, 'SF Pro Display', sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+body::before {
+  content: '';
+  position: absolute;
+  top: -100px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 800px;
+  height: 800px;
+  background: radial-gradient(circle, rgba(0,212,170,0.12) 0%, transparent 70%);
+}
+.card {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  padding: 0 80px;
+}
+.logo {
+  font-family: 'SF Mono', 'Menlo', monospace;
+  font-size: 28px;
+  font-weight: 700;
+  color: #e8e8ed;
+  margin-bottom: 32px;
+  letter-spacing: -0.02em;
+}
+.logo span { color: #00d4aa; }
+h1 {
+  font-size: 64px;
+  font-weight: 700;
+  color: #e8e8ed;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+  margin-bottom: 24px;
+}
+h1 .accent { color: #00d4aa; }
+p {
+  font-size: 24px;
+  color: #8a8a9a;
+  line-height: 1.5;
+  max-width: 700px;
+  margin: 0 auto;
+}
+.tags {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 32px;
+}
+.tag {
+  padding: 8px 16px;
+  border: 1px solid #2a2a3e;
+  border-radius: 100px;
+  font-family: 'SF Mono', monospace;
+  font-size: 14px;
+  color: #8a8a9a;
+}
+.grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(30,30,46,0.3) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(30,30,46,0.3) 1px, transparent 1px);
+  background-size: 60px 60px;
+  z-index: 0;
+}
+</style>
+</head>
+<body>
+<div class="grid"></div>
+<div class="card">
+  <div class="logo">commently<span>_</span></div>
+  <h1>Comments for<br><span class="accent">any application.</span></h1>
+  <p>Self-hosted, multi-tenant comments API with threading, reactions, webhooks, and more.</p>
+  <div class="tags">
+    <span class="tag">Multi-tenant</span>
+    <span class="tag">Threaded</span>
+    <span class="tag">Webhooks</span>
+    <span class="tag">Open Source</span>
+  </div>
+</div>
+</body>
+</html>
