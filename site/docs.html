@@ -32,13 +32,30 @@
 
   <h4>Tenant API</h4>
   <a href="#create-tenant">Create tenant</a>
+  <a href="#list-tenants">List tenants</a>
   <a href="#rotate-key">Rotate API key</a>
+  <a href="#delete-tenant">Delete tenant</a>
 
   <h4>Comments API</h4>
   <a href="#create-comment">Create comment</a>
   <a href="#list-comments">List comments</a>
+  <a href="#edit-comment">Edit comment</a>
   <a href="#comment-counts">Get counts</a>
   <a href="#delete-comment">Delete comment</a>
+
+  <h4>Reactions</h4>
+  <a href="#add-reaction">Add reaction</a>
+  <a href="#list-reactions">List reactions</a>
+  <a href="#remove-reaction">Remove reaction</a>
+
+  <h4>Webhooks</h4>
+  <a href="#create-webhook">Create webhook</a>
+  <a href="#list-webhooks">List webhooks</a>
+  <a href="#delete-webhook">Delete webhook</a>
+
+  <h4>Export</h4>
+  <a href="#export-resource">Export resource</a>
+  <a href="#export-tenant">Export tenant</a>
 
   <h4>Guides</h4>
   <a href="#integration">Integration guide</a>
@@ -174,6 +191,35 @@ npm run dev
   <strong>Important:</strong> The <code>api_key</code> is returned <strong>only in this response</strong>. Store it securely — it cannot be retrieved later.
 </div>
 
+<!-- ── LIST TENANTS ── -->
+<h2 id="list-tenants">List tenants</h2>
+<div class="endpoint-badge">
+  <span class="method get">GET</span>
+  <span class="endpoint-path">/api/tenants</span>
+</div>
+<p>List all registered tenants with their key prefixes. Requires admin authentication.</p>
+
+<div class="code-block">
+  <div class="code-header"><span class="lang">bash</span><span>Request</span></div>
+  <pre>curl http://localhost:3002/api/tenants \
+  -H <span class="str">"Authorization: Bearer $ADMIN_KEY"</span></pre>
+</div>
+
+<div class="code-block">
+  <div class="code-header"><span class="lang">json</span><span>Response 200</span></div>
+  <pre>{
+  <span class="key">"success"</span>: <span class="num">true</span>,
+  <span class="key">"data"</span>: [
+    {
+      <span class="key">"id"</span>: <span class="str">"a1b2c3d4-..."</span>,
+      <span class="key">"name"</span>: <span class="str">"deckdrop"</span>,
+      <span class="key">"api_key_prefix"</span>: <span class="str">"sk_commently_abc1..."</span>,
+      <span class="key">"created_at"</span>: <span class="str">"2026-06-01T10:00:00Z"</span>
+    }
+  ]
+}</pre>
+</div>
+
 <!-- ── ROTATE KEY ── -->
 <h2 id="rotate-key">Rotate API key</h2>
 <div class="endpoint-badge">
@@ -195,6 +241,28 @@ npm run dev
   <span class="key">"data"</span>: {
     <span class="key">"api_key"</span>: <span class="str">"sk_commently_newkey..."</span>
   }
+}</pre>
+</div>
+
+<!-- ── DELETE TENANT ── -->
+<h2 id="delete-tenant">Delete tenant</h2>
+<div class="endpoint-badge">
+  <span class="method delete">DELETE</span>
+  <span class="endpoint-path">/api/tenants/:id</span>
+</div>
+<p>Permanently delete a tenant and all its comments. This action cannot be undone. Requires admin authentication.</p>
+
+<div class="code-block">
+  <div class="code-header"><span class="lang">bash</span><span>Request</span></div>
+  <pre>curl -X DELETE <span class="str">"http://localhost:3002/api/tenants/$TENANT_ID"</span> \
+  -H <span class="str">"Authorization: Bearer $ADMIN_KEY"</span></pre>
+</div>
+
+<div class="code-block">
+  <div class="code-header"><span class="lang">json</span><span>Response 200</span></div>
+  <pre>{
+  <span class="key">"success"</span>: <span class="num">true</span>,
+  <span class="key">"data"</span>: { <span class="key">"id"</span>: <span class="str">"a1b2c3d4-..."</span>, <span class="key">"deleted"</span>: <span class="num">true</span> }
 }</pre>
 </div>
 
@@ -377,12 +445,13 @@ npm run dev
   <span class="method delete">DELETE</span>
   <span class="endpoint-path">/api/comments/:id</span>
 </div>
-<p>Soft-delete a comment. Deleted comments are excluded from all list and count queries. Replies to a deleted parent remain visible — your app can render the parent as "[deleted]".</p>
+<p>Soft-delete a comment. Deleted comments are excluded from all list and count queries. Replies to a deleted parent remain visible — your app can render the parent as "[deleted]". Optionally pass <code>X-Author-Id</code> header for audit logging.</p>
 
 <div class="code-block">
   <div class="code-header"><span class="lang">bash</span><span>Request</span></div>
   <pre>curl -X DELETE <span class="str">"http://localhost:3002/api/comments/$COMMENT_ID"</span> \
-  -H <span class="str">"X-API-Key: $API_KEY"</span></pre>
+  -H <span class="str">"X-API-Key: $API_KEY"</span> \
+  -H <span class="str">"X-Author-Id: admin@example.com"</span></pre>
 </div>
 
 <div class="code-block">
@@ -391,9 +460,208 @@ npm run dev
   <span class="key">"success"</span>: <span class="num">true</span>,
   <span class="key">"data"</span>: {
     <span class="key">"id"</span>: <span class="str">"c9a2f1b3-..."</span>,
-    <span class="key">"deleted_at"</span>: <span class="str">"2026-06-05T11:00:00Z"</span>
+    <span class="key">"deleted_at"</span>: <span class="str">"2026-06-05T11:00:00Z"</span>,
+    <span class="key">"deleted_by"</span>: <span class="str">"admin@example.com"</span>
   }
 }</pre>
+</div>
+
+<!-- ── EDIT COMMENT ── -->
+<h2 id="edit-comment">Edit comment</h2>
+<div class="endpoint-badge">
+  <span class="method post">PATCH</span>
+  <span class="endpoint-path">/api/comments/:id</span>
+</div>
+<p>Edit a comment's body. Only the original author can edit, and only within the edit window (default 15 minutes, configurable via <code>COMMENT_EDIT_WINDOW_MINUTES</code> env var).</p>
+
+<table class="param-table">
+  <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td>author_id <span class="required">required</span></td><td><span class="type">string</span></td><td>Must match the comment's original author</td></tr>
+    <tr><td>body <span class="required">required</span></td><td><span class="type">string</span></td><td>New comment body (1–5000 characters)</td></tr>
+  </tbody>
+</table>
+
+<div class="code-block">
+  <div class="code-header"><span class="lang">bash</span><span>Request</span></div>
+  <pre>curl -X PATCH <span class="str">"http://localhost:3002/api/comments/$COMMENT_ID"</span> \
+  -H <span class="str">"X-API-Key: $API_KEY"</span> \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"author_id": "viewer@gmail.com", "body": "Updated comment text"}'</span></pre>
+</div>
+
+<div class="code-block">
+  <div class="code-header"><span class="lang">json</span><span>Response 200</span></div>
+  <pre>{
+  <span class="key">"success"</span>: <span class="num">true</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"id"</span>: <span class="str">"c9a2f1b3-..."</span>,
+    <span class="key">"body"</span>: <span class="str">"Updated comment text"</span>,
+    <span class="key">"edited_at"</span>: <span class="str">"2026-06-05T10:35:00Z"</span>
+  }
+}</pre>
+</div>
+
+<div class="info-box">
+  <strong>Errors:</strong> Returns <code>FORBIDDEN</code> (403) if the author doesn't match, <code>EDIT_WINDOW_EXPIRED</code> (403) if the edit window has passed.
+</div>
+
+<!-- ── REACTIONS ── -->
+<h2 id="add-reaction">Add reaction</h2>
+<div class="endpoint-badge">
+  <span class="method post">POST</span>
+  <span class="endpoint-path">/api/comments/:commentId/reactions</span>
+</div>
+<p>Add an emoji reaction to a comment. Duplicate reactions (same author + same emoji) are silently ignored.</p>
+
+<table class="param-table">
+  <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td>author_id <span class="required">required</span></td><td><span class="type">string</span></td><td>Who is reacting</td></tr>
+    <tr><td>emoji <span class="required">required</span></td><td><span class="type">string</span></td><td>Emoji string, max 32 chars</td></tr>
+  </tbody>
+</table>
+
+<div class="code-block">
+  <div class="code-header"><span class="lang">bash</span><span>Request</span></div>
+  <pre>curl -X POST <span class="str">"http://localhost:3002/api/comments/$COMMENT_ID/reactions"</span> \
+  -H <span class="str">"X-API-Key: $API_KEY"</span> \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"author_id": "user@example.com", "emoji": "👍"}'</span></pre>
+</div>
+
+<div class="code-block">
+  <div class="code-header"><span class="lang">json</span><span>Response 201</span></div>
+  <pre>{
+  <span class="key">"success"</span>: <span class="num">true</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"id"</span>: <span class="str">"r1a2b3c4-..."</span>,
+    <span class="key">"comment_id"</span>: <span class="str">"c9a2f1b3-..."</span>,
+    <span class="key">"author_id"</span>: <span class="str">"user@example.com"</span>,
+    <span class="key">"emoji"</span>: <span class="str">"👍"</span>
+  }
+}</pre>
+</div>
+
+<h2 id="list-reactions">List reactions</h2>
+<div class="endpoint-badge">
+  <span class="method get">GET</span>
+  <span class="endpoint-path">/api/comments/:commentId/reactions</span>
+</div>
+<p>Get reactions for a comment, grouped by emoji with counts and author lists.</p>
+
+<div class="code-block">
+  <div class="code-header"><span class="lang">json</span><span>Response 200</span></div>
+  <pre>{
+  <span class="key">"success"</span>: <span class="num">true</span>,
+  <span class="key">"data"</span>: [
+    { <span class="key">"emoji"</span>: <span class="str">"👍"</span>, <span class="key">"count"</span>: <span class="num">3</span>, <span class="key">"authors"</span>: [<span class="str">"alice@ex.com"</span>, <span class="str">"bob@ex.com"</span>, <span class="str">"carol@ex.com"</span>] },
+    { <span class="key">"emoji"</span>: <span class="str">"❤️"</span>, <span class="key">"count"</span>: <span class="num">1</span>, <span class="key">"authors"</span>: [<span class="str">"alice@ex.com"</span>] }
+  ]
+}</pre>
+</div>
+
+<h2 id="remove-reaction">Remove reaction</h2>
+<div class="endpoint-badge">
+  <span class="method delete">DELETE</span>
+  <span class="endpoint-path">/api/comments/:commentId/reactions</span>
+</div>
+<p>Remove a specific reaction. Pass <code>author_id</code> and <code>emoji</code> in the request body.</p>
+
+<div class="code-block">
+  <div class="code-header"><span class="lang">bash</span><span>Request</span></div>
+  <pre>curl -X DELETE <span class="str">"http://localhost:3002/api/comments/$COMMENT_ID/reactions"</span> \
+  -H <span class="str">"X-API-Key: $API_KEY"</span> \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"author_id": "user@example.com", "emoji": "👍"}'</span></pre>
+</div>
+
+<!-- ── WEBHOOKS ── -->
+<h2 id="create-webhook">Create webhook</h2>
+<div class="endpoint-badge">
+  <span class="method post">POST</span>
+  <span class="endpoint-path">/api/webhooks</span>
+</div>
+<p>Register a webhook URL to receive notifications when comments are created or deleted. Requires tenant API key.</p>
+
+<table class="param-table">
+  <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td>url <span class="required">required</span></td><td><span class="type">string</span></td><td>HTTPS endpoint to receive webhook payloads</td></tr>
+    <tr><td>events</td><td><span class="type">string[]</span></td><td>Events to subscribe to (default: <code>["comment.created", "comment.deleted"]</code>)</td></tr>
+    <tr><td>secret</td><td><span class="type">string</span></td><td>HMAC secret — payloads are signed with <code>X-Commently-Signature</code></td></tr>
+  </tbody>
+</table>
+
+<div class="code-block">
+  <div class="code-header"><span class="lang">bash</span><span>Request</span></div>
+  <pre>curl -X POST http://localhost:3002/api/webhooks \
+  -H <span class="str">"X-API-Key: $API_KEY"</span> \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"url": "https://myapp.com/webhook", "secret": "my-signing-secret"}'</span></pre>
+</div>
+
+<div class="code-block">
+  <div class="code-header"><span class="lang">json</span><span>Webhook payload</span></div>
+  <pre>{
+  <span class="key">"event"</span>: <span class="str">"comment.created"</span>,
+  <span class="key">"data"</span>: { <span class="key">"id"</span>: <span class="str">"..."</span>, <span class="key">"body"</span>: <span class="str">"..."</span>, ... },
+  <span class="key">"timestamp"</span>: <span class="str">"2026-06-05T10:30:00.000Z"</span>
+}</pre>
+</div>
+
+<h2 id="list-webhooks">List webhooks</h2>
+<div class="endpoint-badge">
+  <span class="method get">GET</span>
+  <span class="endpoint-path">/api/webhooks</span>
+</div>
+<p>List all webhooks for the authenticated tenant.</p>
+
+<h2 id="delete-webhook">Delete webhook</h2>
+<div class="endpoint-badge">
+  <span class="method delete">DELETE</span>
+  <span class="endpoint-path">/api/webhooks/:id</span>
+</div>
+<p>Remove a webhook registration.</p>
+
+<!-- ── EXPORT ── -->
+<h2 id="export-resource">Export resource comments</h2>
+<div class="endpoint-badge">
+  <span class="method get">GET</span>
+  <span class="endpoint-path">/api/export/resource</span>
+</div>
+<p>Export all comments (including deleted) for a resource. Requires tenant API key.</p>
+
+<table class="param-table">
+  <thead><tr><th>Param</th><th>Type</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td>resource_id <span class="required">required</span></td><td><span class="type">string</span></td><td>The resource to export</td></tr>
+  </tbody>
+</table>
+
+<div class="code-block">
+  <div class="code-header"><span class="lang">json</span><span>Response 200</span></div>
+  <pre>{
+  <span class="key">"success"</span>: <span class="num">true</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"resource_id"</span>: <span class="str">"deck-uuid-123"</span>,
+    <span class="key">"count"</span>: <span class="num">42</span>,
+    <span class="key">"comments"</span>: [ ... ]
+  }
+}</pre>
+</div>
+
+<h2 id="export-tenant">Export tenant comments</h2>
+<div class="endpoint-badge">
+  <span class="method get">GET</span>
+  <span class="endpoint-path">/api/export/tenant/:id</span>
+</div>
+<p>Export all comments for a tenant across all resources. Requires admin authentication.</p>
+
+<div class="code-block">
+  <div class="code-header"><span class="lang">bash</span><span>Request</span></div>
+  <pre>curl <span class="str">"http://localhost:3002/api/export/tenant/$TENANT_ID"</span> \
+  -H <span class="str">"Authorization: Bearer $ADMIN_KEY"</span></pre>
 </div>
 
 <!-- ── INTEGRATION GUIDE ── -->
@@ -524,8 +792,11 @@ app.<span class="fn">post</span>(<span class="str">'/api/my-app/comments'</span>
     <tr><td><code>VALIDATION_ERROR</code></td><td>400</td><td>Missing or invalid request fields</td></tr>
     <tr><td><code>INVALID_JSON</code></td><td>400</td><td>Request body is not valid JSON</td></tr>
     <tr><td><code>UNAUTHORIZED</code></td><td>401</td><td>Missing, invalid, or expired API key</td></tr>
+    <tr><td><code>FORBIDDEN</code></td><td>403</td><td>Not allowed (e.g. editing another user's comment)</td></tr>
+    <tr><td><code>EDIT_WINDOW_EXPIRED</code></td><td>403</td><td>Comment edit window has expired</td></tr>
     <tr><td><code>NOT_FOUND</code></td><td>404</td><td>Resource, comment, or tenant not found</td></tr>
     <tr><td><code>CONFLICT</code></td><td>409</td><td>Duplicate tenant name</td></tr>
+    <tr><td><code>RATE_LIMITED</code></td><td>429</td><td>Too many requests — try again later</td></tr>
     <tr><td><code>INTERNAL_ERROR</code></td><td>500</td><td>Unexpected server error</td></tr>
   </tbody>
 </table>
